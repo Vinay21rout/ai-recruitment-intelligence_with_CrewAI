@@ -1,0 +1,32 @@
+# Environment
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[oc]
+*.egg-info/
+.Python
+
+# Virtual environments
+.venv/
+venv/
+venv_script/
+env/
+
+# Sensitive content
+text_content.py
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# CrewAI internals
+.crewai/
