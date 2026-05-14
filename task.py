@@ -1,5 +1,5 @@
 from crewai import Task
-from agent import build_resume_parser_agent, build_jd_agent, build_analysis_agent
+from agent import build_resume_parser_agent, build_jd_agent, build_analysis_agent, build_email_writer_agent
 
 def build_resume_task(resume_text, agent):
     return Task(
@@ -482,7 +482,49 @@ IMPORTANT RULES
 - Be unbiased and factual
 
 """,
-        expected_output="Structured JSON containing ATS analysis, job matching analysis, and candidate evaluation.",
+        expected_output="Structured JSON containing candidate_data list i.e.(name,email,matched_skills,unmatched_skills,Score), ATS analysis, job matching analysis, and candidate evaluation and final_score",
         agent=agent,
         context=[resume_task, jd_task]
     )
+
+
+def build_email_writer_task(agent,analysis_task):
+  return Task(
+
+        description=f"""
+        Write an HR email for the candidate.
+
+        Candidate Details:
+        -------------------
+        Name: {['name']}
+        Email: {['email']}
+        Score: {['score']}
+        Matched Skills: {['matched_skills']}
+        Missing Skills: {['missing_skills']}
+
+        Rules:
+        -------
+        - If score >= 80:
+            Write shortlisted email.
+
+        - If score between 60 and 79:
+            Write hold/review email.
+
+        - If score < 60:
+            Write rejection email with positive feedback.
+
+        Tone:
+        -----
+        Professional
+        Human-like
+        Encouraging
+        """,
+
+        expected_output="""
+        A complete professional HR email
+        ready to send to the candidate.
+        """,
+
+        agent=agent,
+        context=[analysis_task]
+  ) 

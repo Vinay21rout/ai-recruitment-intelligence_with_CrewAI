@@ -80,8 +80,13 @@ st.markdown("""
     </div>
     <div style="text-align:center;font-size:1.4rem;color:#555;margin:4px 0;">↓</div>
     <div style="text-align:center;font-size:0.75rem;color:#ffaa00;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">🔗 Phase 2 — Sequential</div>
-    <div style="background:#1a1a2e;border:1px solid #ffaa00;border-radius:8px;padding:10px;text-align:center;">
+    <div style="background:#1a1a2e;border:1px solid #ffaa00;border-radius:8px;padding:10px;text-align:center;margin-bottom:8px;">
         🔍 <b>Matching Analyzer</b><br><span style="font-size:0.75rem;color:#aaa">POST /analyze-match</span>
+    </div>
+    <div style="text-align:center;font-size:1.4rem;color:#555;margin:4px 0;">↓</div>
+    <div style="text-align:center;font-size:0.75rem;color:#ff88cc;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">📧 Phase 3 — Sequential</div>
+    <div style="background:#1a1a2e;border:1px solid #ff88cc;border-radius:8px;padding:10px;text-align:center;">
+        ✉️ <b>Email Writer</b><br><span style="font-size:0.75rem;color:#aaa">POST /write-email</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -90,7 +95,7 @@ st.markdown("""
 st.markdown("### 🧠 Agent Status")
 pipeline_ph = st.empty()
 
-def render_pipeline(s1, s2, s3, t1="", t2="", t3=""):
+def render_pipeline(s1, s2, s3, s4, t1="", t2="", t3="", t4=""):
     badge = lambda s: f'<span class="badge badge-{s}">{"⏳ Idle" if s=="idle" else "⚡ Running" if s=="active" else "✅ Done"}</span>'
     def card(icon, title, endpoint, desc, s, timing):
         t = f'<div style="font-size:0.75rem;color:#888;margin-top:6px;">⏱ {timing}</div>' if timing else ""
@@ -101,7 +106,7 @@ def render_pipeline(s1, s2, s3, t1="", t2="", t3=""):
             <div style="color:#bbb;font-size:0.8rem;margin-bottom:10px">{desc}</div>
             {badge(s)}{t}</div>"""
     with pipeline_ph.container():
-        c1, c2, c3 = st.columns(3)
+        c1, c2, c3, c4 = st.columns(4)
         with c1:
             st.markdown(card("📄","Resume Parser Agent","POST /parse-resume",
                 "Extracts skills, projects, experience & ATS keywords from resume.",s1,t1), unsafe_allow_html=True)
@@ -111,8 +116,11 @@ def render_pipeline(s1, s2, s3, t1="", t2="", t3=""):
         with c3:
             st.markdown(card("🔍","Matching Analysis Agent","POST /analyze-match",
                 "Compares resume vs JD — ATS score, match %, skill gaps & hiring decision.",s3,t3), unsafe_allow_html=True)
+        with c4:
+            st.markdown(card("✉️","Email Writer Agent","POST /write-email",
+                "Writes professional HR email based on match score — shortlist, hold, or rejection.",s4,t4), unsafe_allow_html=True)
 
-render_pipeline("idle","idle","idle")
+render_pipeline("idle","idle","idle","idle")
 
 # ── Live Log ──────────────────────────────────────────────────────────────────
 st.divider()
@@ -137,7 +145,7 @@ if run_btn:
 
     # ── Phase 1: Parallel API calls ───────────────────────────────────────────
     log("🚀 Phase 1 — Calling /parse-resume & /analyze-jd in parallel", "info")
-    render_pipeline("active","active","idle")
+    render_pipeline("active","active","idle","idle")
 
     t1_start = t2_start = time.time()
 
@@ -173,7 +181,7 @@ if run_btn:
         d = "." * dots
         s1 = "active" if t_r.is_alive() else "done"
         s2 = "active" if t_j.is_alive() else "done"
-        render_pipeline(s1, s2, "idle")
+        render_pipeline(s1, s2, "idle","idle")
         if t_r.is_alive(): log(f"⚡ Resume Parser Agent working{d}", "info")
         if t_j.is_alive(): log(f"⚡ JD Analysis Agent working{d}", "info")
         time.sleep(2)
@@ -193,11 +201,11 @@ if run_btn:
     else:
         log("✅ JD Analysis Agent — DONE", "success")
 
-    render_pipeline("done","done","idle", t1_elapsed, t2_elapsed)
+    render_pipeline("done","done","idle","idle", t1_elapsed, t2_elapsed)
 
-    # ── Phase 2: Sequential API call ──────────────────────────────────────────
+    # ── Phase 2: Sequential — Matching ───────────────────────────────────────
     log("🔗 Phase 2 — Calling /analyze-match sequentially", "warn")
-    render_pipeline("done","done","active", t1_elapsed, t2_elapsed)
+    render_pipeline("done","done","active","idle", t1_elapsed, t2_elapsed)
 
     t3_start = time.time()
 
@@ -206,8 +214,12 @@ if run_btn:
             r = requests.post(f"{API_BASE}/analyze-match", json={
                 "resume_output": api_results["resume"],
                 "jd_output":     api_results["jd"]
-            }, timeout=120)
+            }, timeout=180)
+            r.raise_for_status()
             api_results["analysis"] = r.json()["result"]
+        except requests.HTTPError as e:
+            detail = r.json().get("detail", {})
+            api_errors["analysis"] = f"[{detail.get('type','Error')}] {detail.get('error', str(e))}"
         except Exception as e:
             api_errors["analysis"] = str(e)
 
@@ -217,7 +229,7 @@ if run_btn:
     dots = 0
     while t_m.is_alive():
         dots = (dots + 1) % 4
-        render_pipeline("done","done","active", t1_elapsed, t2_elapsed)
+        render_pipeline("done","done","active","idle", t1_elapsed, t2_elapsed)
         log(f"⚡ Matching Analysis Agent working{'.' * dots}", "info")
         time.sleep(2)
 
@@ -229,8 +241,47 @@ if run_btn:
     else:
         log("✅ Matching Analysis Agent — DONE", "success")
 
-    render_pipeline("done","done","done", t1_elapsed, t2_elapsed, t3_elapsed)
-    log("🎉 All agents completed! Rendering results...", "success")
+    render_pipeline("done","done","done","idle", t1_elapsed, t2_elapsed, t3_elapsed)
+
+    # ── Phase 3: Sequential — Email Writer ───────────────────────────────────
+    log("📧 Phase 3 — Calling /write-email sequentially", "warn")
+    render_pipeline("done","done","done","active", t1_elapsed, t2_elapsed, t3_elapsed)
+
+    t4_start = time.time()
+
+    def call_email():
+        try:
+            r = requests.post(f"{API_BASE}/write-email", json={
+                "analysis_output": api_results["analysis"]
+            }, timeout=180)
+            r.raise_for_status()
+            api_results["email"] = r.json()["result"]
+        except requests.HTTPError as e:
+            detail = r.json().get("detail", {})
+            api_errors["email"] = f"[{detail.get('type','Error')}] {detail.get('error', str(e))}"
+        except Exception as e:
+            api_errors["email"] = str(e)
+
+    t_e = threading.Thread(target=call_email)
+    t_e.start()
+
+    dots = 0
+    while t_e.is_alive():
+        dots = (dots + 1) % 4
+        render_pipeline("done","done","done","active", t1_elapsed, t2_elapsed, t3_elapsed)
+        log(f"⚡ Email Writer Agent working{'.' * dots}", "info")
+        time.sleep(2)
+
+    t_e.join()
+    t4_elapsed = f"{time.time()-t4_start:.1f}s"
+
+    if "email" in api_errors:
+        log(f"❌ Email Writer failed: {api_errors['email']}", "warn"); st.stop()
+    else:
+        log("✅ Email Writer Agent — DONE", "success")
+
+    render_pipeline("done","done","done","done", t1_elapsed, t2_elapsed, t3_elapsed, t4_elapsed)
+    log("🎉 All 4 agents completed! Rendering results...", "success")
 
     # ── Parse Result ──────────────────────────────────────────────────────────
     raw = api_results.get("analysis", "")
@@ -330,6 +381,18 @@ if run_btn:
     st.info(final.get("reasoning","N/A"))
     st.markdown('<div class="sec-hdr">📌 Hiring Recommendation</div>', unsafe_allow_html=True)
     st.success(data.get("hiring_recommendation","N/A"))
+
+    # ── Email Output ──────────────────────────────────────────────────────────────────
+    st.divider()
+    st.markdown('<div class="sec-hdr">✉️ Generated HR Email</div>', unsafe_allow_html=True)
+    email_output = api_results.get("email", "")
+    if email_output:
+        st.markdown(f"""
+        <div style="background:#12122a;border:1px solid #ff88cc;border-radius:12px;padding:20px;color:#eee;font-family:Georgia,serif;line-height:1.8;white-space:pre-wrap;">{email_output}</div>
+        """, unsafe_allow_html=True)
+        st.download_button("📥 Download Email", email_output, file_name="hr_email.txt", mime="text/plain")
+    else:
+        st.warning("Email output not available.")
 
     if show_raw:
         st.divider()

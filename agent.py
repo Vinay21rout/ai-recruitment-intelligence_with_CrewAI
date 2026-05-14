@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def get_llm():
-    return LLM(model="groq/llama-3.1-8b-instant")
+    return LLM(model="groq/")
 
 def build_resume_parser_agent():
     return Agent(
@@ -111,4 +111,32 @@ def build_analysis_agent():
         verbose=False,
         allow_delegation=False,
         llm=create_llm(get_llm())
+    )
+    
+def build_email_writer_agent():
+    return Agent(
+    role="HR Email Communication Specialist",
+
+    goal="""
+    Generate professional HR emails for candidates
+    based on their resume analysis score and hiring status.
+    """,
+
+    backstory="""
+    You are an experienced HR communication officer
+    working in a multinational company.
+
+    Your responsibility is to write:
+    - Shortlisting emails
+    - Rejection emails
+    - Hold emails
+    - Interview invitation emails
+
+    You maintain professional tone,
+    clarity, politeness, and encouragement.
+    """,
+
+    verbose=False,
+    allow_delegation=False,
+    llm=create_llm(get_llm())
     )

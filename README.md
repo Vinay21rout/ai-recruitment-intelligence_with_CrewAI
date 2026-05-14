@@ -1,18 +1,19 @@
 # 🤖 AI Recruitment Intelligence — Multi-Agent System with CrewAI
 
-> An intelligent, production-ready AI recruitment pipeline powered by **CrewAI multi-agent framework**, **FastAPI**, and **Streamlit** — designed to automate resume parsing, job description analysis, and candidate-job matching with ATS scoring.
+> An intelligent, production-ready AI recruitment pipeline powered by **CrewAI multi-agent framework**, **FastAPI**, and **Streamlit** — designed to automate resume parsing, job description analysis, candidate-job matching with ATS scoring, and automated HR email generation.
 
 ---
 
 ## 📌 Overview
 
-This system uses **3 specialized AI agents** working in a **parallel + sequential pipeline** to:
+This system uses **4 specialized AI agents** working in a **parallel + sequential pipeline** to:
 
 1. **Parse resumes** — extract structured ATS-relevant data (skills, projects, experience, certifications)
 2. **Analyze job descriptions** — extract hiring requirements, ATS keywords, responsibilities
 3. **Match & score** — compare resume vs JD and generate ATS score, job match %, skill gap analysis, and hiring recommendation
+4. **Write HR emails** — automatically generate professional shortlist, hold, or rejection emails based on match score
 
-The backend is served via **FastAPI** with dedicated endpoints for each agent, and the frontend is a **Streamlit** dashboard with live agent status updates, real-time logs, and rich result visualization.
+The backend is served via **FastAPI** with dedicated endpoints for each agent, and the frontend is a **Streamlit** dashboard with live agent status updates, real-time logs, phase transitions, and rich result visualization.
 
 ---
 
@@ -21,14 +22,15 @@ The backend is served via **FastAPI** with dedicated endpoints for each agent, a
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    Streamlit UI (app.py)                 │
-│         Live Agent Cards | Workflow Diagram | Results    │
+│   Live Agent Cards | Workflow Diagram | Results | Email  │
 └──────────────────────┬──────────────────────────────────┘
                        │ HTTP Requests
 ┌──────────────────────▼──────────────────────────────────┐
 │                  FastAPI Backend (api/main.py)           │
 │                                                          │
-│  POST /parse-resume   POST /analyze-jd   POST /analyze-match │
-│  POST /run-pipeline   GET  /health                       │
+│  POST /parse-resume    POST /analyze-jd                  │
+│  POST /analyze-match   POST /write-email                 │
+│  POST /run-pipeline    GET  /health                      │
 └──────────┬───────────────────┬──────────────────────────┘
            │                   │
     ┌──────▼──────┐     ┌──────▼──────┐
@@ -38,27 +40,52 @@ The backend is served via **FastAPI** with dedicated endpoints for each agent, a
     └──────┬──────┘     └──────┬──────┘
            └─────────┬─────────┘
                      │
-        ┌────────────▼────────────┐
-        │     CrewAI Agents       │
-        │                         │
-        │  ⚡ PHASE 1 (Parallel)  │
-        │  📄 Resume Parser Agent │
-        │  📋 JD Analysis Agent   │
-        │                         │
-        │  🔗 PHASE 2 (Sequential)│
-        │  🔍 Matching Agent      │
-        └─────────────────────────┘
+        ┌────────────▼─────────────────┐
+        │        CrewAI Agents         │
+        │                              │
+        │  ⚡ PHASE 1 — Parallel       │
+        │  📄 Resume Parser Agent      │
+        │  📋 JD Analysis Agent        │
+        │                              │
+        │  🔗 PHASE 2 — Sequential     │
+        │  🔍 Matching Analysis Agent  │
+        │                              │
+        │  📧 PHASE 3 — Sequential     │
+        │  ✉️  Email Writer Agent       │
+        └──────────────────────────────┘
 ```
 
 ---
 
 ## 🧠 Agents
 
-| Agent | Role | Endpoint | Execution |
-|-------|------|----------|-----------|
-| 📄 Resume Parser Agent | Extracts structured ATS data from resume | `POST /parse-resume` | Parallel (Phase 1) |
-| 📋 JD Analysis Agent | Extracts hiring requirements from JD | `POST /analyze-jd` | Parallel (Phase 1) |
-| 🔍 Matching Analysis Agent | Compares resume vs JD, generates scores | `POST /analyze-match` | Sequential (Phase 2) |
+| Agent | Role | Endpoint | Phase |
+|-------|------|----------|-------|
+| 📄 Resume Parser Agent | Extracts structured ATS data from resume | `POST /parse-resume` | ⚡ Phase 1 — Parallel |
+| 📋 JD Analysis Agent | Extracts hiring requirements from JD | `POST /analyze-jd` | ⚡ Phase 1 — Parallel |
+| 🔍 Matching Analysis Agent | Compares resume vs JD, generates scores & hiring decision | `POST /analyze-match` | 🔗 Phase 2 — Sequential |
+| ✉️ Email Writer Agent | Writes professional HR email based on match score | `POST /write-email` | 📧 Phase 3 — Sequential |
+
+### Agent Details
+
+**📄 Resume Parser Agent**
+- Role: Advanced Resume Parser
+- Extracts: personal info, education, skills (technical/AI-ML/soft/tools), projects, experience, certifications, ATS keywords, predicted roles, experience level, resume metrics
+
+**📋 JD Analysis Agent**
+- Role: Job Description Analysis Specialist
+- Extracts: job info, role category, required/preferred skills, responsibilities, ATS keywords, technologies, seniority level, work mode
+
+**🔍 Matching Analysis Agent**
+- Role: Resume × JD Matcher & ATS Evaluator
+- Generates: ATS score, job match %, technical match score, project relevance score, skill gap analysis, strengths/weaknesses, hiring recommendation, final decision
+
+**✉️ Email Writer Agent**
+- Role: HR Communication Specialist
+- Generates professional HR emails based on match score:
+  - Score ≥ 80 → Shortlisting / Interview Invitation email
+  - Score 60–79 → Hold / Under Review email
+  - Score < 60 → Rejection email with positive feedback
 
 ---
 
@@ -81,6 +108,7 @@ The backend is served via **FastAPI** with dedicated endpoints for each agent, a
 | **Hiring Recommendation** | Detailed hiring decision |
 | **Improvement Suggestions** | Actionable resume improvement tips |
 | **Final Decision** | is_good_fit + detailed reasoning |
+| **HR Email** | Auto-generated professional email (shortlist/hold/rejection) |
 
 ---
 
@@ -161,7 +189,7 @@ OPENAI_API_KEY=NA
 ```python
 # Google Gemini (best quality)
 def get_llm():
-    return LLM(model="google/gemini-2.5-flash")
+    return LLM(model="google/gemini-2.0-flash")
 
 # OR Groq (fast + free)
 def get_llm():
@@ -203,38 +231,37 @@ API Docs: **http://localhost:8000/docs**
 | `POST` | `/parse-resume` | Run Resume Parser Agent |
 | `POST` | `/analyze-jd` | Run JD Analysis Agent |
 | `POST` | `/analyze-match` | Run Matching Analysis Agent |
-| `POST` | `/run-pipeline` | Run full pipeline (all 3 agents) |
+| `POST` | `/write-email` | Run Email Writer Agent |
+| `POST` | `/run-pipeline` | Run full pipeline (all 4 agents) |
 
-### Example Request
+### Example Requests
 
 ```bash
+# Parse Resume
 curl -X POST http://localhost:8000/parse-resume \
   -H "Content-Type: application/json" \
   -d '{"resume_text": "Your resume text here..."}'
-```
 
-### Example Response
-
-```json
-{
-  "result": "{\"personal_information\": {...}, \"skills\": {...}, \"projects\": [...], ...}"
-}
+# Write HR Email
+curl -X POST http://localhost:8000/write-email \
+  -H "Content-Type: application/json" \
+  -d '{"analysis_output": "analysis JSON here..."}'
 ```
 
 ---
 
 ## 🖥️ Streamlit UI Features
 
-- **Live Agent Status Cards** — each agent card updates in real-time (Idle → Running → Done)
-- **Workflow Architecture Diagram** — visual representation of parallel + sequential pipeline
-- **Live Agent Log** — timestamped log stream showing agent progress
-- **Execution Timing** — each agent card shows time taken
+- **4 Live Agent Status Cards** — each card updates in real-time (Idle → Running → Done) with execution time
+- **Workflow Architecture Diagram** — visual Phase 1 (parallel) → Phase 2 (sequential) → Phase 3 (sequential) pipeline
+- **Live Agent Log** — timestamped log stream showing per-agent progress
 - **Score Dashboard** — ATS Score, Job Match %, Technical Match, Project Relevance
 - **Skills Analysis** — matched / missing / partial skill tags
 - **Strengths & Weaknesses** — side-by-side candidate evaluation
 - **ATS Keyword Analysis** — keyword quality + missing keywords
 - **Improvement Recommendations** — actionable suggestions
 - **Final Hiring Decision** — reasoning + recommendation
+- **Generated HR Email** — styled email output with download button
 - **Raw JSON Toggle** — view complete structured output
 - **FastAPI Health Indicator** — live server status in sidebar
 
@@ -254,7 +281,7 @@ python crew.py
 
 | Provider | Model | Free Tier |
 |----------|-------|-----------|
-| Google Gemini | `google/gemini-2.5-flash` | 15 RPM, 1500/day |
+| Google Gemini | `google/gemini-2.0-flash` | 15 RPM, 1500/day |
 | Google Gemini | `gemini/gemini-1.5-flash` | Higher quota |
 | Groq | `groq/llama-3.3-70b-versatile` | Generous free tier |
 | Groq | `groq/deepseek-r1-distill-llama-70b` | Best JSON quality on Groq |

@@ -15,8 +15,8 @@ logger = logging.getLogger("job-agent-api")
 
 # ── import from existing project files ───────────────────────────────────────
 sys.path.append("..")
-from agent import build_resume_parser_agent, build_jd_agent, build_analysis_agent
-from task import build_resume_task, build_jd_task, build_analysis_task
+from agent import build_resume_parser_agent, build_jd_agent, build_analysis_agent, build_email_writer_agent
+from task import build_resume_task, build_jd_task, build_analysis_task, build_email_writer_task
 
 load_dotenv()
 
@@ -39,6 +39,9 @@ class JDRequest(BaseModel):
 class AnalysisRequest(BaseModel):
     resume_output: str
     jd_output: str
+
+class EmailRequest(BaseModel):
+    analysis_output: str
 
 class FullPipelineRequest(BaseModel):
     resume_text: str
@@ -139,6 +142,29 @@ def analyze_match(req: AnalysisRequest):
         raise error_response("/analyze-match", e)
 
 
+@app.post("/write-email")
+def write_email(req: EmailRequest):
+    logger.info("[/write-email] Starting Email Writer Agent")
+    try:
+        a_agent  = build_analysis_agent()
+        e_agent  = build_email_writer_agent()
+
+        # dummy resume/jd tasks as context carriers
+        r_agent  = build_resume_parser_agent()
+        j_agent  = build_jd_agent()
+        r_task   = build_resume_task(req.analysis_output, r_agent)
+        j_task   = build_jd_task(req.analysis_output, j_agent)
+        a_task   = build_analysis_task(a_agent, r_task, j_task)
+        e_task   = build_email_writer_task(e_agent, a_task)
+
+        crew   = Crew(agents=[e_agent], tasks=[e_task], verbose=False)
+        result = run_crew_silent(crew)
+        logger.info("[/write-email] Completed successfully")
+        return {"result": result}
+    except Exception as e:
+        raise error_response("/write-email", e)
+
+
 @app.post("/run-pipeline")
 def run_pipeline(req: FullPipelineRequest):
     """Runs all 3 agents: Resume + JD in parallel, then Matching sequentially."""
@@ -166,7 +192,7 @@ def run_pipeline(req: FullPipelineRequest):
     if errors:
         return {"status": "error", "errors": errors}
 
-    # Phase 2 — sequential
+    # Phase 2 — sequential (matching)
     try:
         results["analysis"] = analyze_match(AnalysisRequest(
             resume_output=results["resume"],
@@ -175,9 +201,18 @@ def run_pipeline(req: FullPipelineRequest):
     except Exception as e:
         return {"status": "error", "errors": {"analysis": str(e)}}
 
+    # Phase 3 — sequential (email writer)
+    try:
+        results["email"] = write_email(EmailRequest(
+            analysis_output=results["analysis"]
+        ))["result"]
+    except Exception as e:
+        return {"status": "error", "errors": {"email": str(e)}}
+
     return {
         "status":          "success",
         "resume_output":   results["resume"],
         "jd_output":       results["jd"],
-        "analysis_output": results["analysis"]
+        "analysis_output": results["analysis"],
+        "email_output":    results["email"]
     }
