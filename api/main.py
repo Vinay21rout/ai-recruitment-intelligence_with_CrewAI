@@ -146,19 +146,10 @@ def analyze_match(req: AnalysisRequest):
 def write_email(req: EmailRequest):
     logger.info("[/write-email] Starting Email Writer Agent")
     try:
-        a_agent  = build_analysis_agent()
-        e_agent  = build_email_writer_agent()
-
-        # dummy resume/jd tasks as context carriers
-        r_agent  = build_resume_parser_agent()
-        j_agent  = build_jd_agent()
-        r_task   = build_resume_task(req.analysis_output, r_agent)
-        j_task   = build_jd_task(req.analysis_output, j_agent)
-        a_task   = build_analysis_task(a_agent, r_task, j_task)
-        e_task   = build_email_writer_task(e_agent, a_task)
-
-        crew   = Crew(agents=[e_agent], tasks=[e_task], verbose=False)
-        result = run_crew_silent(crew)
+        e_agent = build_email_writer_agent()
+        e_task  = build_email_writer_task(e_agent, req.analysis_output)
+        crew    = Crew(agents=[e_agent], tasks=[e_task], verbose=False)
+        result  = run_crew_silent(crew)
         logger.info("[/write-email] Completed successfully")
         return {"result": result}
     except Exception as e:

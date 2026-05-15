@@ -286,8 +286,14 @@ if run_btn:
     # ── Parse Result ──────────────────────────────────────────────────────────
     raw = api_results.get("analysis", "")
     try:
-        s = raw.find("{"); e = raw.rfind("}") + 1
-        data = json.loads(raw[s:e])
+        # strip markdown code blocks if present
+        clean = raw.strip()
+        if clean.startswith("```"):
+            clean = clean.split("```")[1]
+            if clean.startswith("json"):
+                clean = clean[4:]
+        s = clean.find("{"); e = clean.rfind("}") + 1
+        data = json.loads(clean[s:e])
     except Exception:
         data = None
 
@@ -304,6 +310,16 @@ if run_btn:
     match  = scores.get("job_match_percentage", 0)
     tech   = scores.get("technical_match_score", 0)
     proj   = scores.get("project_relevance_score", 0)
+
+    # Candidate info banner
+    cinfo = data.get("candidate_info", {})
+    if cinfo.get("full_name"):
+        st.markdown(f"""
+        <div style="background:#1a1a2e;border:1px solid #00d4ff;border-radius:10px;padding:12px 20px;margin-bottom:16px;color:#eee;">
+        👤 <b>{cinfo.get('full_name','')}</b> &nbsp;|&nbsp;
+        📧 {cinfo.get('email','')} &nbsp;|&nbsp;
+        💼 {cinfo.get('applied_role','')}
+        </div>""", unsafe_allow_html=True)
 
     # Score cards
     s1,s2,s3,s4 = st.columns(4)

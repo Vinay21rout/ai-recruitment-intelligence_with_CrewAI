@@ -1,91 +1,36 @@
 from crewai import Task
 from agent import build_resume_parser_agent, build_jd_agent, build_analysis_agent, build_email_writer_agent
 
+
 def build_resume_task(resume_text, agent):
     return Task(
-        description=f"""
-You are an advanced Resume Parser Agent responsible for extracting structured, accurate, ATS-relevant information from resumes for AI-powered job automation systems.
+        description=f"""SYSTEM: You are an enterprise resume parsing engine. Your only job is to extract information from the resume text below and return it as a valid JSON object.
 
-Analyze the following resume carefully and extract all important information.
+CRITICAL RULES — READ BEFORE PARSING:
+1. Extract ONLY information that is EXPLICITLY written in the resume text below.
+2. Do NOT infer, assume, or generate any information not present in the text.
+3. Do NOT add skills, tools, or technologies that are not mentioned.
+4. Do NOT paraphrase or embellish any content.
+5. If a field has no data in the resume, use empty string "" or empty array [].
+6. The full_name, email, and phone MUST be copied character-by-character from the resume text.
+7. Return ONLY the JSON object. No explanation. No markdown. No ```json blocks.
+8. Start your response with {{ and end with }}.
 
---------------------------------------------------
-OBJECTIVE
---------------------------------------------------
+RESUME TEXT:
+{resume_text}
 
-Extract:
-- Personal information
-- Education
-- Skills
-- Experience
-- Projects
-- Certifications
-- Achievements
-- Resume links
-- ATS keywords
-- Role suitability
-- Missing information
-- Resume quality indicators
-
---------------------------------------------------
-INSTRUCTIONS
---------------------------------------------------
-
-1. Extract all relevant details from the resume text.
-
-2. Categorize skills properly into:
-- technical_skills
-- ai_ml_skills
-- soft_skills
-- tools_platforms
-
-3. Extract projects with:
-- project_name
-- description
-- technologies_used
-- github_link
-- live_link
-- duration
-- complexity_level
-
-4. Extract internships/experience with:
-- company_name
-- role
-- duration
-- responsibilities
-- technologies_used
-
-5. Extract all URLs separately.
-
-6. Detect ATS keywords.
-
-7. Predict suitable job roles.
-
-8. Detect experience level:
-- beginner
-- intermediate
-- advanced
-
---------------------------------------------------
-OUTPUT FORMAT
---------------------------------------------------
-
-Return ONLY valid JSON.
-
-JSON Structure:
-
+OUTPUT — Return this exact JSON structure filled with data from the resume above:
 {{
   "personal_information": {{
-    "full_name": "",
-    "email": "",
-    "phone": "",
-    "location": "",
-    "linkedin": "",
-    "github": "",
-    "portfolio": ""
+    "full_name": "<exact name from resume>",
+    "email": "<exact email from resume>",
+    "phone": "<exact phone from resume>",
+    "location": "<exact location from resume>",
+    "linkedin": "<exact linkedin url from resume or empty>",
+    "github": "<exact github url from resume or empty>",
+    "portfolio": "<exact portfolio url from resume or empty>"
   }},
-
-  "professional_summary": "",
-
+  "professional_summary": "<exact objective/summary text from resume or empty>",
   "education": [
     {{
       "degree": "",
@@ -96,26 +41,21 @@ JSON Structure:
       "end_year": ""
     }}
   ],
-
   "skills": {{
     "technical_skills": [],
     "ai_ml_skills": [],
     "soft_skills": [],
     "tools_platforms": []
   }},
-
   "projects": [
     {{
       "project_name": "",
       "description": "",
       "technologies_used": [],
       "github_link": "",
-      "live_link": "",
-      "duration": "",
       "complexity_level": ""
     }}
   ],
-
   "experience": [
     {{
       "company_name": "",
@@ -125,65 +65,25 @@ JSON Structure:
       "technologies_used": []
     }}
   ],
-
   "certifications": [
     {{
       "certificate_name": "",
       "issuer": "",
-      "date": "",
-      "credential_link": ""
+      "date": ""
     }}
   ],
-
   "achievements": [],
-
-  "leadership_and_activities": [],
-
-  "resume_links": {{
-    "github_links": [],
-    "linkedin_links": [],
-    "portfolio_links": [],
-    "other_links": []
-  }},
-
   "ats_keywords": [],
-
   "predicted_roles": [],
-
   "experience_level": "",
-
-  "resume_metrics": {{
-    "resume_length": "",
-    "project_count": 0,
-    "skills_count": 0,
-    "has_github": false,
-    "has_portfolio": false,
-    "has_linkedin": false
-  }},
-
-  "missing_sections": [],
-
   "overall_resume_strength": ""
-}}
-
---------------------------------------------------
-IMPORTANT RULES
---------------------------------------------------
-
-- Return ONLY JSON
-- Do not include markdown
-- Do not hallucinate
-- Use empty arrays if missing
-- Ensure valid JSON formatting
-
---------------------------------------------------
-RESUME
---------------------------------------------------
-
-{resume_text}
-
-""",
-        expected_output="Structured JSON containing extracted resume information.",
+}}""",
+        expected_output=(
+            "A single valid JSON object starting with { and ending with }. "
+            "All fields populated strictly from the resume text. "
+            "personal_information.full_name must match the candidate name exactly as written in the resume. "
+            "No markdown. No explanation. No code blocks."
+        ),
         agent=agent,
         async_execution=True
     )
@@ -191,340 +91,184 @@ RESUME
 
 def build_jd_task(jd_text, agent):
     return Task(
-        description=f"""
-Analyze the following job description carefully.
+        description=f"""SYSTEM: You are an enterprise job description parsing engine. Your only job is to extract hiring requirements from the JD text below and return a valid JSON object.
 
---------------------------------------------------
-OBJECTIVE
---------------------------------------------------
+CRITICAL RULES — READ BEFORE PARSING:
+1. Extract ONLY information that is EXPLICITLY written in the JD text below.
+2. Do NOT infer industry norms or assume hidden requirements.
+3. Clearly separate mandatory skills from preferred/optional skills.
+4. Do NOT add requirements that are not written in the JD.
+5. If a field has no data in the JD, use empty string "" or empty array [].
+6. Return ONLY the JSON object. No explanation. No markdown. No ```json blocks.
+7. Start your response with {{ and end with }}.
 
-Extract:
-- Role information
-- Required skills
-- Preferred skills
-- Responsibilities
-- Experience requirements
-- Education requirements
-- ATS keywords
-- Tools & technologies
-- Soft skills
-- Role category
-- Seniority level
-- Work mode
-- Location
-- Salary/Stipend if available
+JOB DESCRIPTION TEXT:
+{jd_text}
 
---------------------------------------------------
-INSTRUCTIONS
---------------------------------------------------
-
-1. Identify the exact job role.
-
-2. Extract technical skills separately.
-
-3. Extract AI/ML skills separately if present.
-
-4. Extract tools/platforms separately.
-
-5. Extract soft skills separately.
-
-6. Extract:
-- mandatory requirements
-- optional/preferred requirements
-
-7. Detect ATS keywords from the JD.
-
-8. Predict experience level:
-- fresher
-- junior
-- mid-level
-- senior
-
-9. Detect work type:
-- remote
-- hybrid
-- onsite
-
-10. Detect role category:
-- AI/ML
-- Backend
-- Frontend
-- Full Stack
-- Data Science
-- DevOps
-etc.
-
---------------------------------------------------
-OUTPUT FORMAT
---------------------------------------------------
-
-Return ONLY valid JSON.
-
-JSON Structure:
-
+OUTPUT — Return this exact JSON structure filled with data from the JD above:
 {{
   "job_information": {{
-    "job_title": "",
-    "company_name": "",
-    "location": "",
-    "work_mode": "",
-    "employment_type": "",
-    "experience_level": "",
-    "salary_or_stipend": ""
+    "job_title": "<exact job title from JD>",
+    "company_name": "<exact company name from JD or empty>",
+    "location": "<exact location from JD or empty>",
+    "work_mode": "<remote/hybrid/onsite — only if explicitly stated>",
+    "employment_type": "<internship/full-time/part-time — only if stated>",
+    "experience_level": "<fresher/junior/mid/senior — only if stated>",
+    "salary_or_stipend": "<exact salary/stipend from JD or empty>"
   }},
-
   "role_category": "",
-
-  "required_skills": {{
+  "mandatory_skills": {{
     "technical_skills": [],
     "ai_ml_skills": [],
     "tools_platforms": [],
     "soft_skills": []
   }},
-
   "preferred_skills": [],
-
   "responsibilities": [],
-
   "education_requirements": [],
-
   "experience_requirements": [],
-
   "ats_keywords": [],
-
   "technologies_mentioned": [],
-
-  "important_tools": [],
-
-  "important_frameworks": [],
-
-  "role_expectations": [],
-
-  "application_deadline": "",
-
-  "job_links": [],
-
   "overall_job_complexity": "",
-
   "candidate_suitability": {{
     "best_for": [],
     "not_ideal_for": []
   }}
-}}
-
---------------------------------------------------
-IMPORTANT RULES
---------------------------------------------------
-
-- Return ONLY JSON
-- Do not include markdown
-- Do not hallucinate
-- Use empty arrays if data missing
-- Ensure valid JSON
-- Extract only factual information from JD
-- Normalize duplicate skills
-
---------------------------------------------------
-JOB DESCRIPTION
---------------------------------------------------
-
-{jd_text}
-
-""",
-        expected_output="Structured JSON containing complete job description analysis.",
-        agent=agent,
-        async_execution=True
+}}""",
+        expected_output=(
+            "A single valid JSON object starting with { and ending with }. "
+            "All fields populated strictly from the JD text. "
+            "mandatory_skills and preferred_skills must be clearly separated. "
+            "No markdown. No explanation. No code blocks."
+        ),
+        async_execution=True,
+        agent=agent
     )
 
 
 def build_analysis_task(agent, resume_task, jd_task):
     return Task(
-        description="""
-Analyze the parsed resume data and parsed job description data.
+        description="""SYSTEM: You are an enterprise recruitment intelligence analyst. You will receive two inputs via context:
+1. RESUME DATA — parsed JSON output from the resume parser agent.
+2. JD DATA — parsed JSON output from the JD parser agent.
 
---------------------------------------------------
-OBJECTIVE
---------------------------------------------------
+Your job is to compare them and return a strict, evidence-based recruitment analysis as a valid JSON object.
 
-Compare:
-- skills
-- projects
-- experience
-- technologies
-- education
-- ATS keywords
+CRITICAL RULES — READ BEFORE ANALYZING:
+1. Compare ONLY what is present in the resume data against what is required in the JD data.
+2. Do NOT assume the candidate has any skill not listed in resume data.
+3. Do NOT inflate scores. Be strict and realistic.
+4. candidate_info MUST be copied VERBATIM from resume data personal_information field:
+   - full_name = resume_data.personal_information.full_name
+   - email = resume_data.personal_information.email
+   - phone = resume_data.personal_information.phone
+   - applied_role = jd_data.job_information.job_title
+5. Do NOT generate or guess candidate_info values.
+6. Missing mandatory skills MUST reduce scores significantly.
+7. Academic/personal projects are weighted lower than professional experience.
+8. Return ONLY the JSON object. No explanation. No markdown. No ```json blocks.
+9. Start your response with { and end with }.
 
-Then generate:
-- ATS score
-- Job match percentage
-- Skill gap analysis
-- Candidate strengths
-- Candidate weaknesses
-- Hiring recommendation
-- Interview readiness
-- Resume improvement suggestions
+SCORING METHODOLOGY:
+- ats_score (0-10): keyword overlap between resume ats_keywords and JD ats_keywords
+- job_match_percentage (0-100): weighted score — mandatory skills 50%, projects 25%, experience 15%, education 10%
+- technical_match_score (0-10): technical_skills + ai_ml_skills + tools match against JD mandatory_skills
+- project_relevance_score (0-10): how directly candidate projects relate to JD responsibilities
 
---------------------------------------------------
-INSTRUCTIONS
---------------------------------------------------
+SCORE THRESHOLDS:
+- 80-100: Strong shortlist — meets 80%+ mandatory requirements
+- 60-79: Hold/review — meets 60-79% mandatory requirements
+- 40-59: Weak match — significant gaps in mandatory requirements
+- 0-39: Reject — does not meet core requirements
 
-1. Compare resume skills with required JD skills.
-
-2. Detect:
-- matched skills
-- missing skills
-- partially matched skills
-
-3. Compare projects against JD requirements.
-
-4. Evaluate candidate suitability for the role.
-
-5. Generate ATS compatibility score out of 10.
-
-6. Generate overall job match percentage.
-
-7. Identify weak areas.
-
-8. Identify strong areas.
-
-9. Predict interview probability:
-- low
-- medium
-- high
-
-10. Recommend improvements for better matching.
-
-11. Evaluate:
-- project relevance
-- technical depth
-- experience quality
-
---------------------------------------------------
-SCORING LOGIC
---------------------------------------------------
-
-Consider:
-- skill matching
-- project relevance
-- ATS keywords
-- experience
-- education
-- technologies
-- portfolio/GitHub presence
-
---------------------------------------------------
-OUTPUT FORMAT
---------------------------------------------------
-
-Return ONLY valid JSON.
-
-JSON Structure:
-
+OUTPUT — Return this exact JSON structure:
 {
+  "candidate_info": {
+    "full_name": "<VERBATIM from resume personal_information.full_name>",
+    "email": "<VERBATIM from resume personal_information.email>",
+    "phone": "<VERBATIM from resume personal_information.phone>",
+    "applied_role": "<VERBATIM from jd job_information.job_title>"
+  },
   "scores": {
     "ats_score": 0,
     "job_match_percentage": 0,
     "technical_match_score": 0,
     "project_relevance_score": 0
   },
-
   "matched_skills": [],
-
   "missing_skills": [],
-
   "partially_matched_skills": [],
-
   "candidate_strengths": [],
-
   "candidate_weaknesses": [],
-
   "matching_projects": [],
-
   "irrelevant_projects": [],
-
   "experience_analysis": {
     "experience_relevance": "",
     "experience_level_fit": ""
   },
-
   "education_analysis": {
     "education_match": "",
     "degree_relevance": ""
   },
-
   "ats_analysis": {
     "keyword_match_quality": "",
     "missing_keywords": [],
     "resume_optimization_suggestions": []
   },
-
   "interview_probability": "",
-
   "hiring_recommendation": "",
-
   "improvement_recommendations": [],
-
   "final_decision": {
     "is_good_fit": false,
     "reasoning": ""
   }
-}
-
---------------------------------------------------
-IMPORTANT RULES
---------------------------------------------------
-
-- Return ONLY valid JSON
-- Do not include markdown
-- Do not hallucinate
-- Use only provided context
-- Ensure proper JSON formatting
-- Be unbiased and factual
-
-""",
-        expected_output="Structured JSON containing candidate_data list i.e.(name,email,matched_skills,unmatched_skills,Score), ATS analysis, job matching analysis, and candidate evaluation and final_score",
+}""",
+        expected_output=(
+            "A single valid JSON object starting with { and ending with }. "
+            "candidate_info.full_name must exactly match the name from resume parser output. "
+            "Scores must be realistic and evidence-based. "
+            "No markdown. No explanation. No code blocks."
+        ),
         agent=agent,
         context=[resume_task, jd_task]
     )
 
 
-def build_email_writer_task(agent,analysis_task):
-  return Task(
+def build_email_writer_task(agent, analysis_output):
+    return Task(
+        description=f"""SYSTEM: You are an enterprise HR communication specialist. You will receive a recruitment analysis report below. Your job is to write one professional HR email to the candidate.
 
-        description=f"""
-        Write an HR email for the candidate.
+RECRUITMENT ANALYSIS REPORT:
+{analysis_output}
 
-        Candidate Details:
-        -------------------
-        Name: {['name']}
-        Email: {['email']}
-        Score: {['score']}
-        Matched Skills: {['matched_skills']}
-        Missing Skills: {['missing_skills']}
+CRITICAL RULES — READ BEFORE WRITING:
+1. Extract candidate name from candidate_info.full_name in the report above.
+2. Extract applied role from candidate_info.applied_role in the report above.
+3. Extract score from scores.job_match_percentage in the report above.
+4. Extract 2-3 strengths from candidate_strengths in the report above.
+5. Do NOT use any placeholder like [Name], [Role], [Company], [Date] — use actual values only.
+6. Do NOT fabricate interview dates, HR contact details, or next steps not in the report.
+7. Do NOT exaggerate strengths beyond what the report states.
+8. Do NOT make false promises about future opportunities.
+9. Write ONLY the email. No explanation. No JSON. No preamble.
 
-        Rules:
-        -------
-        - If score >= 80:
-            Write shortlisted email.
+EMAIL TYPE BASED ON SCORE:
+- job_match_percentage >= 80:
+  Subject: Congratulations! You have been shortlisted — [applied_role]
+  Content: Warm congratulations, mention 2-3 specific strengths from report, invite for next round, mention company is excited to move forward.
 
-        - If score between 60 and 79:
-            Write hold/review email.
+- job_match_percentage 60-79:
+  Subject: Application Update — [applied_role]
+  Content: Thank candidate for applying, inform profile is under review, mention 1-2 genuine strengths, state decision will be communicated soon, avoid false promises.
 
-        - If score < 60:
-            Write rejection email with positive feedback.
+- job_match_percentage < 60:
+  Subject: Application Status — [applied_role]
+  Content: Thank candidate sincerely, respectfully inform they are not moving forward, mention 1 genuine strength, provide 1-2 specific improvement suggestions from report, encourage to apply again in future.
 
-        Tone:
-        -----
-        Professional
-        Human-like
-        Encouraging
-        """,
-
-        expected_output="""
-        A complete professional HR email
-        ready to send to the candidate.
-        """,
-
-        agent=agent,
-        context=[analysis_task]
-  ) 
+TONE: Professional. Human. Concise. Respectful. No robotic language. No corporate jargon overload.""",
+        expected_output=(
+            "A complete, professional HR email with real candidate name and role from the report. "
+            "No placeholders. No JSON. No markdown headers. Just the email text."
+        ),
+        agent=agent
+    )
