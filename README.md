@@ -159,7 +159,7 @@ cd ai-recruitment-intelligence_with_CrewAI/JOB_AUTOMATION_MULTIAGENT
 
 ```bash
 py -3.11 -m venv .venv
-.venv\Scripts\activate        # Windows
+.venv_script\Scripts\activate        # Windows
 source .venv/bin/activate     # macOS/Linux
 ```
 

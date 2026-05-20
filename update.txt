@@ -1,0 +1,40 @@
+---------------------------------------------------------------------------------------------------------
+                                               UI
+---------------------------------------------------------------------------------------------------------
+1. to add feature in dashboard of providing own prompt other than the system prompt for more better output as per the user 
+
+
+
+
+
+---------------------------------------------------------------------------------------------------------
+                                               BACKEND   
+---------------------------------------------------------------------------------------------------------
+
+MORE FEATURES TO ADD
+
+1. EMAIL WRITER AGENT:
+
+STAGE-1 : GENERATE TEMPLATE FOR JOB/INTERNSHIP AS PER JD TO HR
+STAGE-2 : ABILIY TO ENCLOSE ALL THE INFORMATION OUT OF JD TO THIS EMAIL LIKE EMAIL OF HR , NAME OF HR IF AVAILABLE AND ALL
+STAGE-3 : ABILITY TO SEND MAIL DIRECTLY TO HR BUT AFTER THE APPROVAL OF THE CANDIDATE 
+
+2. JOB SEARCH AGENT:
+
+STAGE-1 : CONNECT WITH DIFFERENT API's AND MCP LIKE APIFY AND LINKEDIN TO GET OTHER RELEVANT JOB OUT OF THE WEB 
+
+3. SHORTLISTING or NOT EMAIL AUTOMATION TO CANDIDATE FROM HR AGENT:
+
+ send email regarding shortlisting or not an further process of selection and also add the candidate details into excel for those who got selected
+
+4.  resume_parser_agent (improvement):
+
+ add the feature to go throuugh the candidate gothub profile and extract the projects related to jd and 
+ additonal project and try to find their impact on real world industry and all 
+
+
+fastapi backend running command:
+
+cd "c:\Users\ACER\OneDrive\Desktop\ARTIFICIAL INTELLIGENCE\CREWAI_MULTIAGENT_SYSTEM\JOB_AUTOMATION_MULTIAGENT"
+uvicorn api.main:app --reload --port 8000
+
