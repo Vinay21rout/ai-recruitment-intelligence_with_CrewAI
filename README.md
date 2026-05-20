@@ -300,4 +300,4 @@ MIT License — free to use, modify, and distribute.
 
 **Vinay Kumar Rout**
 - GitHub: [@Vinay21rout](https://github.com/Vinay21rout)
-- LinkedIn: [linkedin.com/in/vinay-kumar-rout-4798372a9](https://linkedin.com/in/vinay-kumar-rout-4798372a9)
+- LinkedIn: [linkedin.com/in/vinay-kumar-rout-4798372a9]
